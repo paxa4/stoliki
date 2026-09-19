@@ -422,18 +422,11 @@
     </div>
 
     <div id="bookingFields">
-
-      <div class="row2">
-        <div class="field">
-          <label for="fTime">Время</label>
-          <input id="fTime" type="time">
-        </div>
-        <div class="field">
-          <label for="fGuests">Гостей</label>
-          <input id="fGuests" type="number" min="1" max="30" placeholder="2">
-        </div>
+      <div class="field">
+        <label for="fTime">Время брони</label>
+        <input id="fTime" type="time">
       </div>
-     </div>
+    </div>
 
     <div class="sheet-actions">
       <button type="button" class="btn-cancel" id="cancelBtn">Отмена</button>
@@ -469,7 +462,7 @@
   }
 
   function getEntry(num){
-    return state[num] || { status:'free', name:'', time:'', guests:'', phone:'' };
+    return state[num] || { status:'free', time:'' };
   }
 
   function applyCellVisual(cell){
@@ -520,10 +513,7 @@
   var overlay = document.getElementById('overlay');
   var statusToggle = document.getElementById('statusToggle');
   var bookingFields = document.getElementById('bookingFields');
-  var fName = document.getElementById('fName');
   var fTime = document.getElementById('fTime');
-  var fGuests = document.getElementById('fGuests');
-  var fPhone = document.getElementById('fPhone');
 
   function setStatusUI(status){
     currentStatus = status;
@@ -538,10 +528,7 @@
     var entry = getEntry(num);
     document.getElementById('sheetTitle').textContent = 'Столик ' + num + (cap ? ' (до ' + cap + ' чел.)' : '');
     document.getElementById('sheetSub').textContent = 'Выберите статус столика';
-    fName.value = entry.name || '';
     fTime.value = entry.time || '';
-    fGuests.value = entry.guests || '';
-    fPhone.value = entry.phone || '';
     setStatusUI(entry.status || 'free');
     overlay.classList.add('open');
   }
@@ -565,15 +552,9 @@
   document.getElementById('saveBtn').addEventListener('click', function(){
     if(currentTable === null) return;
     if(currentStatus === 'reserved'){
-      state[currentTable] = {
-        status:'reserved',
-        name: fName.value.trim(),
-        time: fTime.value,
-        guests: fGuests.value,
-        phone: fPhone.value.trim()
-      };
+      state[currentTable] = { status:'reserved', time: fTime.value };
     } else if(currentStatus === 'occupied'){
-      state[currentTable] = { status:'occupied', name:'', time:'', guests:'', phone:'' };
+      state[currentTable] = { status:'occupied', time:'' };
     } else {
       delete state[currentTable];
     }
