@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+<title>Схема зала — столики</title>
+<style>
+  :root{
+    --bg:#f6f3ee;
+    --panel:#ffffff;
+    --ink:#2b2620;
+    --muted:#8a8177;
+    --free-bg:#ffffff;
+    --free-border:#3fae5a;
+    --free-text:#2b2620;
+    --occ-bg:#e0503f;
+    --occ-border:#c53f30;
+    --occ-text:#ffffff;
+    --deco:#8f8672;
+    --deco-strong:#3a352c;
+    --header-bg:#ffffff;
+    --shadow:0 1px 3px rgba(0,0,0,0.08);
+    --canvas-bg:#fffdfa;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1c1a17;
+      --panel:#26221d;
+      --ink:#f1ece2;
+      --muted:#9c9284;
+      --free-bg:#2e2a24;
+      --free-border:#4fc26c;
+      --free-text:#f1ece2;
+      --occ-bg:#c94a39;
+      --occ-border:#e06654;
+      --occ-text:#fff;
+      --deco:#6b6355;
+      --deco-strong:#cfc6b6;
+      --header-bg:#26221d;
+      --shadow:0 1px 3px rgba(0,0,0,0.4);
+      --canvas-bg:#211e19;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1c1a17;
+    --panel:#26221d;
+    --ink:#f1ece2;
+    --muted:#9c9284;
+    --free-bg:#2e2a24;
+    --free-border:#4fc26c;
+    --free-text:#f1ece2;
+    --occ-bg:#c94a39;
+    --occ-border:#e06654;
+    --occ-text:#fff;
+    --deco:#6b6355;
+    --deco-strong:#cfc6b6;
+    --header-bg:#26221d;
+    --shadow:0 1px 3px rgba(0,0,0,0.4);
+    --canvas-bg:#211e19;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    width:100%;
+    overflow-x:hidden;
+  }
+
+  header{
+    position:sticky;top:0;z-index:20;
+    background:var(--header-bg);
+    box-shadow:var(--shadow);
+    padding:12px 16px 10px;
+  }
+  header h1{
+    font-size:17px;
+    margin:0 0 8px 0;
+    font-weight:700;
+  }
+  .stats{
+    display:flex;
+    gap:10px;
+    font-size:13px;
+    flex-wrap:wrap;
+  }
+  .pill{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:5px 10px;
+    border-radius:20px;
+    background:var(--bg);
+    color:var(--muted);
+    font-weight:600;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .dot.free{background:var(--free-border);}
+  .dot.occ{background:var(--occ-bg);}
+
+  .actions{
+    display:flex;
+    gap:8px;
+    margin-top:8px;
+  }
+  .actions button{
+    flex:1;
+    font-size:12.5px;
+    padding:9px 6px;
+    border-radius:8px;
+    border:1px solid var(--deco);
+    background:var(--panel);
+    color:var(--ink);
+    font-weight:600;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .actions button:active{opacity:.7;}
+  .actions button.confirming{
+    background:var(--occ-bg);
+    border-color:var(--occ-border);
+    color:#fff;
+  }
+
+  .hint{
+    text-align:center;
+    color:var(--muted);
+    font-size:11.5px;
+    padding:8px 16px 2px;
+  }
+
+  .scroll-wrap{
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:18px 14px 30px;
+  }
+
+  .floor{
+    position:relative;
+    width:920px;
+    height:660px;
+    margin:0 auto;
+    background:var(--canvas-bg);
+    border-radius:14px;
+    flex-shrink:0;
+  }
+
+  .deco-bar{
+    position:absolute;
+    background:var(--deco-strong);
+    border-radius:2px;
+  }
+  .deco-line{
+    position:absolute;
+    border-top:2px solid var(--deco-strong);
+  }
+
+  .zone-label{
+    position:absolute;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border:1.5px dashed var(--deco);
+    border-radius:8px;
+    color:var(--muted);
+    font-size:10.5px;
+    font-weight:600;
+    background:transparent;
+  }
+
+  .table{
+    position:absolute;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:1px;
+    background:var(--free-bg);
+    border:2px solid var(--free-border);
+    color:var(--free-text);
+    border-radius:9px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .08s ease, background .15s ease, border-color .15s ease;
+    box-shadow:var(--shadow);
+  }
+  .table:active{transform:translate(-50%,-50%) scale(0.92) !important;}
+  .table.round{border-radius:50%;}
+  .table.occupied{
+    background:var(--occ-bg);
+    border-color:var(--occ-border);
+    color:var(--occ-text);
+  }
+  .table .cap{
+    font-size:9.5px;
+    font-weight:600;
+    opacity:.8;
+  }
+
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+    padding:0 16px 26px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Схема зала</h1>
+  <div class="stats">
+    <div class="pill"><span class="dot free"></span><span id="freeCount">–</span> свободно</div>
+    <div class="pill"><span class="dot occ"></span><span id="occCount">–</span> занято</div>
+  </div>
+  <div class="actions">
+    <button id="resetBtn">Сбросить всё (сделать свободными)</button>
+  </div>
+</header>
+
+<div class="hint">Нажмите на столик, чтобы отметить занят / свободен. Схему можно листать в обе стороны.</div>
+
+<div class="scroll-wrap">
+  <div class="floor" id="floor">
+
+    <!-- вспомогательные линии (сплошные) -->
+    <div class="deco-bar" style="left:297px; top:105px; width:6px; height:280px;"></div>              <!-- вертикальная перегородка между блоком 5-8 и 12-9 -->
+    <div class="deco-bar" style="left:590px; top:330px; width:34px; height:7px;"></div>               <!-- проход у столика 20 -->
+    <div class="deco-bar" style="left:596px; top:483px; width:8px; height:34px;"></div>                <!-- перегородка между 24 и 23 -->
+    <div class="deco-line" style="left:460px; top:530px; width:230px;"></div>                          <!-- линия над 25/26/27 -->
+
+    <!-- зоны -->
+    <div class="zone-label" style="left:110px; top:40px; width:80px; height:52px; transform:translate(-50%,-50%);">детская</div>
+
+    <!-- левый блок 1-12 (единая сетка: строки y=140/211/282/353, шаг 71) -->
+    <div class="table" data-table="4"  style="left:150px; top:140px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="3"  style="left:150px; top:211px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="2"  style="left:150px; top:282px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="1"  style="left:150px; top:353px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <div class="table" data-table="5"  style="left:250px; top:140px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="6"  style="left:250px; top:211px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="7"  style="left:250px; top:282px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="8"  style="left:250px; top:353px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <div class="table" data-table="12" style="left:350px; top:140px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="11" style="left:350px; top:211px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="10" style="left:350px; top:282px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="9"  style="left:350px; top:353px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- верхний ряд 13-17 (y=40, шаг 90) -->
+    <div class="table" data-table="13" data-cap="4" style="left:305px; top:40px; width:96px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="14" style="left:415px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="15" style="left:505px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="16" style="left:595px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="17" style="left:685px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 19/35 (выровнены по тем же строкам, что и 4-8-12 / 3-6-11) -->
+    <div class="table" data-table="19" data-cap="4" style="left:460px; top:140px; width:70px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="35" data-cap="4" style="left:460px; top:211px; width:70px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 18, 20 -->
+    <div class="table" data-table="18" style="left:560px; top:175px; width:78px; height:145px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="20" style="left:560px; top:282px; width:70px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- круглые 21/22 -->
+    <div class="table round" data-table="21" style="left:520px; top:424px; width:92px; height:92px; transform:translate(-50%,-50%);"></div>
+    <div class="table round" data-table="22" style="left:630px; top:424px; width:92px; height:92px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 24, 23 -->
+    <div class="table" data-table="24" style="left:500px; top:500px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="23" style="left:630px; top:500px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 25,26,27 -->
+    <div class="table" data-table="25" style="left:470px; top:570px; width:58px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="26" style="left:560px; top:570px; width:58px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="27" style="left:650px; top:570px; width:58px; height:52px; transform:translate(-50%,-50%);"></div>
+
+    <!-- правая колонка (шаг 70) -->
+    <div class="table" data-table="34" data-cap="4" style="left:850px; top:40px; width:96px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="33" style="left:850px; top:130px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="32" style="left:850px; top:200px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="31" style="left:850px; top:270px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="30" style="left:850px; top:340px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="29" style="left:850px; top:410px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="28" style="left:850px; top:480px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+  </div>
+</div>
+
+<footer>Данные сохраняются автоматически на этом устройстве</footer>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'restaurant_tables_status_v1';
+  var state = {};
+  var resetConfirmTimer = null;
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ state = JSON.parse(raw) || {}; }
+    }catch(e){
+      console.error('Не удалось прочитать сохранённые данные', e);
+      state = {};
+    }
+  }
+
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){
+      console.error('Не удалось сохранить данные', e);
+    }
+  }
+
+  function applyCellVisual(cell){
+    var num = cell.getAttribute('data-table');
+    var cap = cell.getAttribute('data-cap');
+    var occupied = !!state[num];
+    cell.classList.toggle('occupied', occupied);
+    cell.innerHTML = '<span>' + num + '</span>' + (cap ? '<span class="cap">×' + cap + '</span>' : '');
+  }
+
+  function updateStats(){
+    var tables = document.querySelectorAll('.table');
+    var occ = 0, free = 0;
+    tables.forEach(function(c){
+      var num = c.getAttribute('data-table');
+      if(state[num]){ occ++; } else { free++; }
+    });
+    document.getElementById('freeCount').textContent = free;
+    document.getElementById('occCount').textContent = occ;
+  }
+
+  function resetResetButton(btn){
+    btn.classList.remove('confirming');
+    btn.textContent = 'Сбросить всё (сделать свободными)';
+    if(resetConfirmTimer){ clearTimeout(resetConfirmTimer); resetConfirmTimer = null; }
+  }
+
+  function init(){
+    load();
+    var tables = document.querySelectorAll('.table');
+    tables.forEach(function(cell){
+      applyCellVisual(cell);
+      cell.addEventListener('click', function(){
+        var num = cell.getAttribute('data-table');
+        state[num] = !state[num];
+        applyCellVisual(cell);
+        updateStats();
+        save();
+      });
+    });
+    updateStats();
+
+    var resetBtn = document.getElementById('resetBtn');
+    resetBtn.addEventListener('click', function(){
+      if(!resetBtn.classList.contains('confirming')){
+        // первый клик — просим подтверждение прямо в кнопке
+        resetBtn.classList.add('confirming');
+        resetBtn.textContent = 'Точно? Нажмите ещё раз';
+        resetConfirmTimer = setTimeout(function(){
+          resetResetButton(resetBtn);
+        }, 4000);
+      } else {
+        // второй клик — подтверждаем сброс
+        state = {};
+        tables.forEach(applyCellVisual);
+        updateStats();
+        save();
+        resetResetButton(resetBtn);
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>
