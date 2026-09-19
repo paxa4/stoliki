@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+<title>Схема зала — столики</title>
+<style>
+  :root{
+    --bg:#f6f3ee;
+    --panel:#ffffff;
+    --ink:#2b2620;
+    --muted:#8a8177;
+
+    --free-bg:#ffffff;
+    --free-border:#3fae5a;
+    --free-text:#2b2620;
+
+    --occ-bg:#e0503f;
+    --occ-border:#c53f30;
+    --occ-text:#ffffff;
+
+    --res-bg:#f7b731;
+    --res-border:#c9891a;
+    --res-text:#2b2620;
+
+    --deco-strong:#3a352c;
+    --header-bg:#ffffff;
+    --shadow:0 1px 3px rgba(0,0,0,0.08);
+    --canvas-bg:#fffdfa;
+    --overlay:rgba(20,16,10,0.45);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1c1a17;
+      --panel:#26221d;
+      --ink:#f1ece2;
+      --muted:#9c9284;
+      --free-bg:#2e2a24;
+      --free-border:#4fc26c;
+      --free-text:#f1ece2;
+      --occ-bg:#c94a39;
+      --occ-border:#e06654;
+      --occ-text:#fff;
+      --res-bg:#c98a1f;
+      --res-border:#e8ab3f;
+      --res-text:#241f16;
+      --deco-strong:#cfc6b6;
+      --header-bg:#26221d;
+      --shadow:0 1px 3px rgba(0,0,0,0.4);
+      --canvas-bg:#211e19;
+      --overlay:rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1c1a17;
+    --panel:#26221d;
+    --ink:#f1ece2;
+    --muted:#9c9284;
+    --free-bg:#2e2a24;
+    --free-border:#4fc26c;
+    --free-text:#f1ece2;
+    --occ-bg:#c94a39;
+    --occ-border:#e06654;
+    --occ-text:#fff;
+    --res-bg:#c98a1f;
+    --res-border:#e8ab3f;
+    --res-text:#241f16;
+    --deco-strong:#cfc6b6;
+    --header-bg:#26221d;
+    --shadow:0 1px 3px rgba(0,0,0,0.4);
+    --canvas-bg:#211e19;
+    --overlay:rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    height:100dvh;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+
+  header{
+    flex:0 0 auto;
+    background:var(--header-bg);
+    box-shadow:var(--shadow);
+    padding:8px 12px 6px;
+    z-index:20;
+  }
+  header h1{
+    font-size:14px;
+    margin:0 0 5px 0;
+    font-weight:700;
+  }
+  .stats{
+    display:flex;
+    gap:6px;
+    font-size:11px;
+    flex-wrap:wrap;
+  }
+  .pill{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    padding:3px 8px;
+    border-radius:20px;
+    background:var(--bg);
+    color:var(--muted);
+    font-weight:600;
+    white-space:nowrap;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto;}
+  .dot.free{background:var(--free-border);}
+  .dot.res{background:var(--res-bg);}
+  .dot.occ{background:var(--occ-bg);}
+
+  .actions{
+    display:flex;
+    gap:6px;
+    margin-top:6px;
+  }
+  .actions button{
+    flex:1;
+    font-size:11px;
+    padding:6px 6px;
+    border-radius:8px;
+    border:1px solid var(--muted);
+    background:var(--panel);
+    color:var(--ink);
+    font-weight:600;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .actions button:active{opacity:.7;}
+  .actions button.confirming{
+    background:var(--occ-bg);
+    border-color:var(--occ-border);
+    color:#fff;
+  }
+
+  main{
+    flex:1 1 auto;
+    position:relative;
+    min-height:0;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .floor-wrap{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+  }
+
+  .floor{
+    position:relative;
+    width:920px;
+    height:660px;
+    background:var(--canvas-bg);
+    border-radius:14px;
+    transform-origin:top left;
+  }
+
+  .zoom-ctrl{
+    position:fixed;
+    right:14px;
+    bottom:calc(16px + env(safe-area-inset-bottom,0px));
+    z-index:30;
+    display:flex;
+    flex-direction:column;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,0.2);
+  }
+  .zoom-ctrl button{
+    width:42px;
+    height:42px;
+    background:var(--panel);
+    color:var(--ink);
+    border:none;
+    border-bottom:1px solid var(--bg);
+    font-size:19px;
+    font-weight:700;
+    line-height:1;
+  }
+  .zoom-ctrl button:last-child{border-bottom:none;}
+  .zoom-ctrl button:active{opacity:.7;}
+  .zoom-ctrl button.fit-btn{font-size:14px;}
+
+  .deco-bar{
+    position:absolute;
+    background:var(--deco-strong);
+    border-radius:2px;
+  }
+  .deco-line{
+    position:absolute;
+    border-top:2px solid var(--deco-strong);
+  }
+
+  .zone-label{
+    position:absolute;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border:1.5px dashed var(--muted);
+    border-radius:8px;
+    color:var(--muted);
+    font-size:10.5px;
+    font-weight:600;
+    background:transparent;
+  }
+
+  .table{
+    position:absolute;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:1px;
+    background:var(--free-bg);
+    border:2px solid var(--free-border);
+    color:var(--free-text);
+    border-radius:9px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .08s ease, background .15s ease, border-color .15s ease;
+    box-shadow:var(--shadow);
+  }
+  .table:active{transform:translate(-50%,-50%) scale(0.92) !important;}
+  .table.round{border-radius:50%;}
+  .table.occupied{
+    background:var(--occ-bg);
+    border-color:var(--occ-border);
+    color:var(--occ-text);
+  }
+  .table.reserved{
+    background:var(--res-bg);
+    border-color:var(--res-border);
+    color:var(--res-text);
+  }
+  .table .cap{
+    font-size:9.5px;
+    font-weight:600;
+    opacity:.8;
+  }
+  .table .time{
+    font-size:9px;
+    font-weight:700;
+    opacity:.9;
+  }
+
+  /* ===== bottom sheet modal ===== */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:var(--overlay);
+    z-index:100;
+    display:none;
+    align-items:flex-end;
+  }
+  .overlay.open{display:flex;}
+  .sheet{
+    width:100%;
+    max-height:88vh;
+    overflow-y:auto;
+    background:var(--panel);
+    border-radius:18px 18px 0 0;
+    padding:16px 18px calc(18px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -4px 20px rgba(0,0,0,0.25);
+  }
+  .sheet h2{
+    font-size:16px;
+    margin:0 0 4px;
+  }
+  .sheet .sub{
+    font-size:12px;
+    color:var(--muted);
+    margin:0 0 14px;
+  }
+  .status-toggle{
+    display:flex;
+    gap:6px;
+    margin-bottom:14px;
+  }
+  .status-toggle button{
+    flex:1;
+    padding:9px 4px;
+    border-radius:9px;
+    border:2px solid var(--muted);
+    background:transparent;
+    color:var(--ink);
+    font-size:12px;
+    font-weight:700;
+  }
+  .status-toggle button.active[data-s="free"]{background:var(--free-bg);border-color:var(--free-border);}
+  .status-toggle button.active[data-s="reserved"]{background:var(--res-bg);border-color:var(--res-border);color:var(--res-text);}
+  .status-toggle button.active[data-s="occupied"]{background:var(--occ-bg);border-color:var(--occ-border);color:var(--occ-text);}
+
+  .field{
+    margin-bottom:12px;
+  }
+  .field label{
+    display:block;
+    font-size:11.5px;
+    color:var(--muted);
+    font-weight:600;
+    margin-bottom:5px;
+  }
+  .field input{
+    width:100%;
+    padding:10px 11px;
+    border-radius:9px;
+    border:1.5px solid var(--muted);
+    background:var(--bg);
+    color:var(--ink);
+    font-size:14px;
+  }
+  .field input:focus{outline:2px solid var(--free-border);}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+
+  .sheet-actions{
+    display:flex;
+    gap:10px;
+    margin-top:6px;
+  }
+  .sheet-actions button{
+    flex:1;
+    padding:12px 8px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:700;
+    border:none;
+  }
+  .btn-cancel{
+    background:var(--bg);
+    color:var(--ink);
+    border:1.5px solid var(--muted) !important;
+  }
+  .btn-save{
+    background:var(--free-border);
+    color:#fff;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Схема зала</h1>
+  <div class="stats">
+    <div class="pill"><span class="dot free"></span><span id="freeCount">–</span> своб.</div>
+    <div class="pill"><span class="dot res"></span><span id="resCount">–</span> брон.</div>
+    <div class="pill"><span class="dot occ"></span><span id="occCount">–</span> занято</div>
+  </div>
+  <div class="actions">
+    <button id="resetBtn">Сбросить всё</button>
+  </div>
+</header>
+
+<main>
+  <div class="floor-wrap" id="floorWrap">
+  <div class="floor" id="floor">
+
+    <!-- вспомогательные линии (сплошные) -->
+    <div class="deco-bar" style="left:297px; top:105px; width:6px; height:280px;"></div>
+    <div class="deco-bar" style="left:590px; top:330px; width:34px; height:7px;"></div>
+    <div class="deco-bar" style="left:596px; top:483px; width:8px; height:34px;"></div>
+    <div class="deco-line" style="left:460px; top:530px; width:230px;"></div>
+
+    <!-- зоны -->
+    <div class="zone-label" style="left:110px; top:40px; width:80px; height:52px; transform:translate(-50%,-50%);">детская</div>
+
+    <!-- левый блок 1-12 -->
+    <div class="table" data-table="4"  style="left:150px; top:140px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="3"  style="left:150px; top:211px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="2"  style="left:150px; top:282px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="1"  style="left:150px; top:353px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <div class="table" data-table="5"  style="left:250px; top:140px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="6"  style="left:250px; top:211px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="7"  style="left:250px; top:282px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="8"  style="left:250px; top:353px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <div class="table" data-table="12" style="left:350px; top:140px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="11" style="left:350px; top:211px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="10" style="left:350px; top:282px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="9"  style="left:350px; top:353px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- верхний ряд 13-17 -->
+    <div class="table" data-table="13" data-cap="4" style="left:305px; top:40px; width:96px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="14" style="left:415px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="15" style="left:505px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="16" style="left:595px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="17" style="left:685px; top:40px; width:64px; height:52px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 19/35 -->
+    <div class="table" data-table="19" data-cap="4" style="left:460px; top:140px; width:70px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="35" data-cap="4" style="left:460px; top:211px; width:70px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 18, 20 -->
+    <div class="table" data-table="18" style="left:560px; top:175px; width:78px; height:145px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="20" style="left:560px; top:282px; width:70px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- круглые 21/22 -->
+    <div class="table round" data-table="21" style="left:520px; top:424px; width:92px; height:92px; transform:translate(-50%,-50%);"></div>
+    <div class="table round" data-table="22" style="left:630px; top:424px; width:92px; height:92px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 24, 23 -->
+    <div class="table" data-table="24" style="left:500px; top:500px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="23" style="left:630px; top:500px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+    <!-- 25,26,27 -->
+    <div class="table" data-table="25" style="left:470px; top:570px; width:58px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="26" style="left:560px; top:570px; width:58px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="27" style="left:650px; top:570px; width:58px; height:52px; transform:translate(-50%,-50%);"></div>
+
+    <!-- правая колонка -->
+    <div class="table" data-table="34" data-cap="4" style="left:850px; top:40px; width:96px; height:52px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="33" style="left:850px; top:130px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="32" style="left:850px; top:200px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="31" style="left:850px; top:270px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="30" style="left:850px; top:340px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="29" style="left:850px; top:410px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+    <div class="table" data-table="28" style="left:850px; top:480px; width:64px; height:56px; transform:translate(-50%,-50%);"></div>
+
+  </div>
+  </div>
+</main>
+
+<div class="zoom-ctrl">
+  <button type="button" id="zoomInBtn" aria-label="Увеличить">+</button>
+  <button type="button" id="zoomFitBtn" class="fit-btn" aria-label="По экрану">⤢</button>
+  <button type="button" id="zoomOutBtn" aria-label="Уменьшить">−</button>
+</div>
+
+<!-- ===== booking modal ===== -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <h2 id="sheetTitle">Столик</h2>
+    <p class="sub" id="sheetSub">Выберите статус столика</p>
+
+    <div class="status-toggle" id="statusToggle">
+      <button type="button" data-s="free">Свободен</button>
+      <button type="button" data-s="reserved">Бронь</button>
+      <button type="button" data-s="occupied">Занят</button>
+    </div>
+
+    <div id="bookingFields">
+      <div class="field">
+        <label for="fTime">Время брони</label>
+        <input id="fTime" type="time">
+      </div>
+    </div>
+
+    <div class="sheet-actions">
+      <button type="button" class="btn-cancel" id="cancelBtn">Отмена</button>
+      <button type="button" class="btn-save" id="saveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'restaurant_tables_status_v2';
+  var state = {};
+  var resetConfirmTimer = null;
+  var currentTable = null;
+  var currentStatus = 'free';
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ state = JSON.parse(raw) || {}; }
+    }catch(e){
+      console.error('Не удалось прочитать сохранённые данные', e);
+      state = {};
+    }
+  }
+
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){
+      console.error('Не удалось сохранить данные', e);
+    }
+  }
+
+  function getEntry(num){
+    return state[num] || { status:'free', time:'' };
+  }
+
+  function applyCellVisual(cell){
+    var num = cell.getAttribute('data-table');
+    var cap = cell.getAttribute('data-cap');
+    var entry = getEntry(num);
+    cell.classList.toggle('occupied', entry.status === 'occupied');
+    cell.classList.toggle('reserved', entry.status === 'reserved');
+    var html = '<span>' + num + '</span>';
+    if(cap){ html += '<span class="cap">×' + cap + '</span>'; }
+    if(entry.status === 'reserved' && entry.time){ html += '<span class="time">' + entry.time + '</span>'; }
+    cell.innerHTML = html;
+  }
+
+  function updateStats(){
+    var tables = document.querySelectorAll('.table');
+    var occ = 0, free = 0, res = 0;
+    tables.forEach(function(c){
+      var num = c.getAttribute('data-table');
+      var s = getEntry(num).status;
+      if(s === 'occupied') occ++;
+      else if(s === 'reserved') res++;
+      else free++;
+    });
+    document.getElementById('freeCount').textContent = free;
+    document.getElementById('resCount').textContent = res;
+    document.getElementById('occCount').textContent = occ;
+  }
+
+  function resetResetButton(btn){
+    btn.classList.remove('confirming');
+    btn.textContent = 'Сбросить всё';
+    if(resetConfirmTimer){ clearTimeout(resetConfirmTimer); resetConfirmTimer = null; }
+  }
+
+  /* ===== zoom (fit / +/- buttons, scroll to pan) ===== */
+  var MIN_SCALE = 0.15;
+  var MAX_SCALE = 3;
+  var currentScale = 1;
+
+  function computeFitScale(){
+    var main = document.querySelector('main');
+    var availW = main.clientWidth - 16;
+    var availH = main.clientHeight - 16;
+    var scale = Math.min(availW / 920, availH / 660, 1);
+    if(scale < MIN_SCALE) scale = MIN_SCALE;
+    return scale;
+  }
+
+  function applyScale(scale, centerAfter){
+    currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+    var wrap = document.getElementById('floorWrap');
+    var floor = document.getElementById('floor');
+    floor.style.transform = 'scale(' + currentScale + ')';
+    wrap.style.width = (920 * currentScale) + 'px';
+    wrap.style.height = (660 * currentScale) + 'px';
+    if(centerAfter){ centerScroll(); }
+  }
+
+  function centerScroll(){
+    var main = document.querySelector('main');
+    requestAnimationFrame(function(){
+      main.scrollLeft = (main.scrollWidth - main.clientWidth) / 2;
+      main.scrollTop = (main.scrollHeight - main.clientHeight) / 2;
+    });
+  }
+
+  function fitFloor(){
+    applyScale(computeFitScale(), true);
+  }
+
+  /* ===== booking modal ===== */
+  var overlay = document.getElementById('overlay');
+  var statusToggle = document.getElementById('statusToggle');
+  var bookingFields = document.getElementById('bookingFields');
+  var fTime = document.getElementById('fTime');
+
+  function setStatusUI(status){
+    currentStatus = status;
+    statusToggle.querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-s') === status);
+    });
+    bookingFields.style.display = (status === 'reserved') ? 'block' : 'none';
+  }
+
+  function openModal(num, cap){
+    currentTable = num;
+    var entry = getEntry(num);
+    document.getElementById('sheetTitle').textContent = 'Столик ' + num + (cap ? ' (до ' + cap + ' чел.)' : '');
+    document.getElementById('sheetSub').textContent = 'Выберите статус столика';
+    fTime.value = entry.time || '';
+    setStatusUI(entry.status || 'free');
+    overlay.classList.add('open');
+  }
+
+  function closeModal(){
+    overlay.classList.remove('open');
+    currentTable = null;
+  }
+
+  statusToggle.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-s]');
+    if(!btn) return;
+    setStatusUI(btn.getAttribute('data-s'));
+  });
+
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', function(e){
+    if(e.target === overlay) closeModal();
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', function(){
+    if(currentTable === null) return;
+    if(currentStatus === 'reserved'){
+      state[currentTable] = { status:'reserved', time: fTime.value };
+    } else if(currentStatus === 'occupied'){
+      state[currentTable] = { status:'occupied', time:'' };
+    } else {
+      delete state[currentTable];
+    }
+    var cell = document.querySelector('.table[data-table="' + currentTable + '"]');
+    if(cell) applyCellVisual(cell);
+    updateStats();
+    save();
+    closeModal();
+  });
+
+  function init(){
+    load();
+    var tables = document.querySelectorAll('.table');
+    tables.forEach(function(cell){
+      applyCellVisual(cell);
+      cell.addEventListener('click', function(){
+        openModal(cell.getAttribute('data-table'), cell.getAttribute('data-cap'));
+      });
+    });
+    updateStats();
+    fitFloor();
+
+    var resetBtn = document.getElementById('resetBtn');
+    resetBtn.addEventListener('click', function(){
+      if(!resetBtn.classList.contains('confirming')){
+        resetBtn.classList.add('confirming');
+        resetBtn.textContent = 'Точно? Ещё раз';
+        resetConfirmTimer = setTimeout(function(){
+          resetResetButton(resetBtn);
+        }, 4000);
+      } else {
+        state = {};
+        tables.forEach(applyCellVisual);
+        updateStats();
+        save();
+        resetResetButton(resetBtn);
+      }
+    });
+
+    var userZoomed = false;
+    window.addEventListener('resize', function(){ if(!userZoomed) fitFloor(); });
+    window.addEventListener('orientationchange', function(){ setTimeout(function(){ if(!userZoomed) fitFloor(); }, 200); });
+
+    document.getElementById('zoomInBtn').addEventListener('click', function(){
+      userZoomed = true;
+      applyScale(currentScale * 1.25, true);
+    });
+    document.getElementById('zoomOutBtn').addEventListener('click', function(){
+      userZoomed = true;
+      applyScale(currentScale / 1.25, true);
+    });
+    document.getElementById('zoomFitBtn').addEventListener('click', function(){
+      userZoomed = false;
+      fitFloor();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+
+</body>
+</html>
